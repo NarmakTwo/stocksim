@@ -1,0 +1,488 @@
+<html><head><base href="https://stock.simulator">
+<title>Advanced Stock Market Simulator</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+  }
+  #app {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  h1, h2 {
+    color: #333;
+    text-align: center;
+  }
+  #user-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+  }
+  #stock-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+  .stock-card {
+    width: 250px;
+    padding: 10px;
+    margin: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+  .stock-card:hover {
+    transform: scale(1.05);
+  }
+  .stock-price {
+    font-size: 1.2em;
+    font-weight: bold;
+  }
+  .stock-change, .profit-indicator {
+    font-size: 0.9em;
+  }
+  .stock-owned {
+    font-size: 0.9em;
+    color: #666;
+  }
+  .positive {
+    color: green;
+  }
+  .negative {
+    color: red;
+  }
+  .stock-preview {
+    width: 200px;
+    height: 100px;
+    margin: 10px auto;
+  }
+  .stock-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 10px;
+  }
+  .stock-actions button, #help-btn, #bribe-btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .buy-btn {
+    background-color: #28a745;
+    color: white;
+  }
+  .sell-btn {
+    background-color: #dc3545;
+    color: white;
+  }
+  #chart-container, #help-container {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    background-color: white;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+    z-index: 1000;
+    overflow-y: auto;
+  }
+  #close-chart, #close-help {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+  }
+  #trade-panel, #loan-panel {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+  }
+  #help-btn {
+    background-color: #17a2b8;
+    color: white;
+    margin-left: 10px;
+  }
+  #bribe-btn {
+    background-color: #ffc107;
+    color: black;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+  <div id="app">
+    <h1>Advanced Stock Market Simulator</h1>
+    <div id="user-info">
+      <span>Balance: $<span id="user-balance">0.00</span></span>
+      <span>Debt: $<span id="user-debt">0.00</span></span>
+      <span>Total Balance: $<span id="total-balance">0.00</span></span>
+      <span>Credit Score: <span id="credit-score">750</span>
+        <button id="help-btn">?</button>
+      </span>
+    </div>
+    <div id="stock-list">
+      <!-- Stock cards will be dynamically inserted here -->
+    </div>
+    <div id="loan-panel">
+      <h2>Bank Loan</h2>
+      <input type="number" id="loan-amount" min="100" step="100" value="1000">
+      <button id="take-loan-btn">Take Loan</button>
+      <button id="repay-loan-btn">Repay Loan</button>
+    </div>
+  </div>
+
+  <div id="chart-container">
+    <span id="close-chart">&times;</span>
+    <canvas id="stock-chart"></canvas>
+  </div>
+
+  <div id="help-container">
+    <span id="close-help">&times;</span>
+    <h2>Credit Score Information</h2>
+    <p>Your credit score is a number between 300 and 850 that represents your creditworthiness. A higher score means you're seen as a lower risk by lenders.</p>
+    <h3>How to Increase Your Credit Score:</h3>
+    <ul>
+      <li>Pay your debts on time</li>
+      <li>Keep your debt levels low</li>
+      <li>Maintain a long credit history</li>
+      <li>Have a mix of different types of credit</li>
+      <li>Limit new credit applications</li>
+    </ul>
+    <p>In this simulation:</p>
+    <ul>
+      <li>Taking a loan decreases your credit score by 10 points</li>
+      <li>Repaying a loan increases your credit score by 5 points</li>
+    </ul>
+    <button id="bribe-btn">Bribe ($2000)</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.1.0/dist/chartjs-adapter-luxon.min.js"></script>
+  <script>
+    const DateTime = luxon.DateTime;
+    let userBalance = 0;
+    let userDebt = 0;
+    let creditScore = 750;
+    let stocksOwned = {};
+    let stockPurchasePrices = {};
+    let currentChart = null;
+
+    const stocks = [
+      { symbol: 'AAPL', name: 'Apple Inc.', price: 150.25 },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 2750.80 },
+      { symbol: 'MSFT', name: 'Microsoft Corporation', price: 305.60 },
+      { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 3380.15 },
+      { symbol: 'FB', name: 'Meta Platforms Inc.', price: 330.40 },
+      { symbol: 'TSLA', name: 'Tesla Inc.', price: 735.90 },
+      { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 280.75 },
+      { symbol: 'JPM', name: 'JPMorgan Chase & Co.', price: 160.40 },
+      { symbol: 'V', name: 'Visa Inc.', price: 230.15 },
+      { symbol: 'JNJ', name: 'Johnson & Johnson', price: 170.50 },
+      { symbol: 'WMT', name: 'Walmart Inc.', price: 145.70 },
+      { symbol: 'PG', name: 'Procter & Gamble Co.', price: 140.85 },
+      { symbol: 'DIS', name: 'The Walt Disney Company', price: 185.25 },
+      { symbol: 'NFLX', name: 'Netflix Inc.', price: 540.60 },
+      { symbol: 'ADBE', name: 'Adobe Inc.', price: 620.40 }
+    ];
+
+    stocks.forEach(stock => {
+      stock.history = [];
+      stock.volatility = Math.random() * 0.1 + 0.05; // Random volatility between 5% and 15%
+      stocksOwned[stock.symbol] = 0;
+      stockPurchasePrices[stock.symbol] = 0;
+    });
+
+    function generateStockPrice(stock) {
+      const noise = (Math.random() - 0.5) * 2;
+      const trend = Math.sin(Date.now() / 10000000) * 0.01;
+      const change = stock.price * (noise * stock.volatility + trend);
+      stock.price += change;
+      stock.price = Math.max(stock.price, 0.01); // Ensure price doesn't go negative
+      stock.change = change;
+      stock.history.push({ time: new Date(), price: stock.price });
+      if (stock.history.length > 100) stock.history.shift();
+    }
+
+    function updateStockPrices() {
+      stocks.forEach(generateStockPrice);
+      renderStockList();
+      updateUserInfo();
+    }
+
+    function renderStockList() {
+      const stockList = document.getElementById('stock-list');
+      stockList.innerHTML = '';
+      stocks.forEach(stock => {
+        const card = document.createElement('div');
+        card.className = 'stock-card';
+        const profitLoss = stocksOwned[stock.symbol] > 0 ? (stock.price - stockPurchasePrices[stock.symbol]) / stockPurchasePrices[stock.symbol] * 100 : 0;
+        card.innerHTML = `
+          <h3>${stock.symbol}</h3>
+          <p>${stock.name}</p>
+          <p class="stock-price">$${stock.price.toFixed(2)}</p>
+          <p class="stock-change ${stock.change >= 0 ? 'positive' : 'negative'}">
+            ${stock.change >= 0 ? '▲' : '▼'} $${Math.abs(stock.change).toFixed(2)}
+          </p>
+          <p class="stock-owned">Owned: ${stocksOwned[stock.symbol]}</p>
+          <p class="profit-indicator ${profitLoss >= 0 ? 'positive' : 'negative'}">
+            ${stocksOwned[stock.symbol] > 0 ? (profitLoss >= 0 ? '▲' : '▼') + ' ' + Math.abs(profitLoss).toFixed(2) + '%' : 'N/A'}
+          </p>
+          <canvas class="stock-preview" id="preview-${stock.symbol}"></canvas>
+          <div class="stock-actions">
+            <button class="buy-btn" data-symbol="${stock.symbol}">Buy</button>
+            <button class="sell-btn" data-symbol="${stock.symbol}">Sell</button>
+          </div>
+        `;
+        card.querySelector('.stock-price').addEventListener('click', () => showStockChart(stock));
+        stockList.appendChild(card);
+        renderPreviewChart(stock);
+      });
+
+      // Add event listeners for buy and sell buttons
+      document.querySelectorAll('.buy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => buyStock(e.target.dataset.symbol));
+      });
+      document.querySelectorAll('.sell-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => sellStock(e.target.dataset.symbol));
+      });
+    }
+
+    function renderPreviewChart(stock) {
+      const ctx = document.getElementById(`preview-${stock.symbol}`).getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            data: stock.history.map(h => ({ x: h.time, y: h.price })),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              enabled: false
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              display: false
+            },
+            y: {
+              display: false
+            }
+          },
+          elements: {
+            line: {
+              borderWidth: 1
+            }
+          }
+        }
+      });
+    }
+
+    function showStockChart(stock) {
+      const chartContainer = document.getElementById('chart-container');
+      chartContainer.style.display = 'block';
+      
+      const ctx = document.getElementById('stock-chart').getContext('2d');
+
+      if (currentChart) {
+        currentChart.destroy();
+      }
+
+      currentChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: stock.symbol,
+            data: stock.history.map(h => ({ x: h.time, y: h.price })),
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'minute'
+              }
+            },
+            y: {
+              beginAtZero: false
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('close-chart').addEventListener('click', () => {
+      document.getElementById('chart-container').style.display = 'none';
+      if (currentChart) {
+        currentChart.destroy();
+        currentChart = null;
+      }
+    });
+
+    function updateUserInfo() {
+      document.getElementById('user-balance').textContent = userBalance.toFixed(2);
+      document.getElementById('user-debt').textContent = userDebt.toFixed(2);
+      document.getElementById('total-balance').textContent = (userBalance - userDebt).toFixed(2);
+      document.getElementById('credit-score').textContent = creditScore;
+    }
+
+    function buyStock(symbol) {
+      const stock = stocks.find(s => s.symbol === symbol);
+      const amount = 1; // For simplicity, we're buying 1 share at a time
+      const cost = stock.price * amount;
+
+      if (cost > userBalance) {
+        alert("Insufficient funds!");
+        return;
+      }
+
+      userBalance -= cost;
+      stocksOwned[symbol] += amount;
+      
+      // Update the average purchase price
+      const totalOwned = stocksOwned[symbol];
+      const totalCost = stockPurchasePrices[symbol] * (totalOwned - 1) + cost;
+      stockPurchasePrices[symbol] = totalCost / totalOwned;
+      
+      updateUserInfo();
+      renderStockList();
+    }
+
+    function sellStock(symbol) {
+      const stock = stocks.find(s => s.symbol === symbol);
+      const amount = 1; // For simplicity, we're selling 1 share at a time
+
+      if (stocksOwned[symbol] < amount) {
+        alert("You don't own enough shares!");
+        return;
+      }
+
+      userBalance += stock.price * amount;
+      stocksOwned[symbol] -= amount;
+      
+      // If all stocks are sold, reset the purchase price
+      if (stocksOwned[symbol] === 0) {
+        stockPurchasePrices[symbol] = 0;
+      }
+      
+      updateUserInfo();
+      renderStockList();
+    }
+
+    function takeLoan() {
+      const amount = parseFloat(document.getElementById('loan-amount').value);
+      const maxLoan = creditScore * 10; // Maximum loan based on credit score
+      
+      if (amount > maxLoan) {
+        alert(`Your credit score only allows a maximum loan of $${maxLoan}`);
+        return;
+      }
+
+      userBalance += amount;
+      userDebt += amount * 1.15; // 15% interest
+      creditScore = Math.max(300, creditScore - 10); // Decrease credit score, minimum 300
+      updateUserInfo();
+    }
+
+    function repayLoan() {
+      const amount = parseFloat(document.getElementById('loan-amount').value);
+      if (amount > userBalance) {
+        alert("Insufficient funds to repay the loan!");
+        return;
+      }
+      if (amount > userDebt) {
+        alert("You're trying to repay more than you owe!");
+        return;
+      }
+      userBalance -= amount;
+      userDebt -= amount;
+      creditScore = Math.min(850, creditScore + 5); // Increase credit score, maximum 850
+      updateUserInfo();
+    }
+
+    function bribeBank() {
+      if (userBalance < 2000) {
+        alert("Insufficient funds for bribery!");
+        return;
+      }
+      userBalance -= 2000;
+      creditScore = Math.min(850, creditScore + 100);
+      updateUserInfo();
+      alert("Bribery successful! Your credit score has increased by 100 points.");
+    }
+
+    document.getElementById('take-loan-btn').addEventListener('click', takeLoan);
+    document.getElementById('repay-loan-btn').addEventListener('click', repayLoan);
+    document.getElementById('help-btn').addEventListener('click', () => {
+      document.getElementById('help-container').style.display = 'block';
+    });
+    document.getElementById('close-help').addEventListener('click', () => {
+      document.getElementById('help-container').style.display = 'none';
+    });
+    document.getElementById('bribe-btn').addEventListener('click', bribeBank);
+
+    // Initial render
+    renderStockList();
+    updateUserInfo();
+
+    // Update prices every 5 seconds
+    setInterval(updateStockPrices, 5000);
+
+    // Fetch real-world stock data
+    async function fetchRealStockData() {
+      const apiKey = 'YOUR_API_KEY'; // Replace with your actual API key
+      const symbols = stocks.map(s => s.symbol).join(',');
+      try {
+        const response = await fetch(`https://financialmodelingprep.com/api/v3/quote/${symbols}?apikey=${apiKey}`);
+        const data = await response.json();
+        
+        data.forEach(realStock => {
+          const simulatedStock = stocks.find(s => s.symbol === realStock.symbol);
+          if (simulatedStock) {
+            simulatedStock.price = realStock.price;
+            simulatedStock.change = realStock.change;
+          }
+        });
+        
+        renderStockList();
+      } catch (error) {
+        console.error('Error fetching real stock data:', error);
+      }
+    }
+
+    // Fetch real stock data every 5 minutes
+    setInterval(fetchRealStockData, 300000);
+
+    // Initial fetch
+    fetchRealStockData();
+  </script>
+</body></html>
