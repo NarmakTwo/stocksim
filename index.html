@@ -182,6 +182,7 @@
     const stableStocks = [
       { symbol: 'SPY', name: 'S&P 500 ETF', price: 450.75, volatility: 0.05 },
       { symbol: 'VTI', name: 'Vanguard Total Market', price: 220.40, volatility: 0.04 },
+      { symbol: 'KDP', name: 'Keurig Dr Pepper Inc.', price: 137, volatility: 0},
       { symbol: 'JNJ', name: 'Johnson & Johnson', price: 170.50, volatility: 0.06 },
       { symbol: 'PG', name: 'Procter & Gamble', price: 140.85, volatility: 0.05 },
       { symbol: 'KO', name: 'Coca-Cola Company', price: 55.30, volatility: 0.04 },
@@ -208,11 +209,18 @@
     });
 
     function updateStockPrice(stock) {
-      const noise = (Math.random() - 0.5) * 2;
-      const trend = Math.sin(Date.now() / 10000000) * 0.01;
-      const change = stock.price * (noise * stock.volatility + trend);
-      stock.price = Math.max(stock.price + change, 0.01);
-      stock.change = change;
+      if (stock.volatility > 0) {
+        const noise = (Math.random() - 0.5) * 2;
+        const trend = Math.sin(Date.now() / 10000000) * 0.01;
+        const change = stock.price * (noise * stock.volatility + trend);
+        stock.price = Math.max(stock.price + change, 0.01);
+        stock.change = change;
+      } else {
+        const change = stock.price * 0.01; 
+        stock.price = stock.price + change;
+        stock.change = change;
+      }
+      
       stock.history.push({ time: Date.now(), price: stock.price });
       if (stock.history.length > 20) stock.history.shift();
     }
