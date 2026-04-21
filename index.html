@@ -284,10 +284,36 @@
     body.dark-mode .settings-divider {
       border-top-color: #374151;
     }
+
+    .crash-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #dc3545;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      margin-top: -20px;
+    }
+
+    .crash-toast.show {
+      opacity: 1;
+      visibility: visible;
+      margin-top: 0;
+    }
   </style>
 </head>
 
 <body>
+  <div id="crash-toast" class="crash-toast">uh-oh! market crash D:</div>
   <button id="settings-btn" class="settings-btn">⚙️</button>
   <div id="settings-menu" class="settings-menu">
     <h3 style="margin-top: 0;">Settings</h3>
@@ -372,7 +398,59 @@
       { symbol: 'COST', name: 'Costco Wholesale', price: 450.70, volatility: 0.05 }
     ];
 
-    // Load saved game or initialize stock histories
+    // Procedural Noise Functions
+    function hashString(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return hash;
+    }
+
+    function hash(n) {
+      let h = Math.sin(n * 12.9898 + 78.233) * 43758.5453123;
+      return (h - Math.floor(h)) * 2.0 - 1.0;
+    }
+
+    function lerp(a, b, t) {
+      return a + t * (b - a);
+    }
+
+    function noise1D(x) {
+      const i = Math.floor(x);
+      const f = x - i;
+      const u = f * f * (3.0 - 2.0 * f);
+      return lerp(hash(i), hash(i + 1), u);
+    }
+
+    function fbm(x, octaves) {
+      let v = 0;
+      let a = 0.5;
+      let shift = 100.0;
+      for (let i = 0; i < octaves; ++i) {
+        v += a * noise1D(x);
+        x = x * 2.0 + shift;
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    let globalMarketState = {
+      crashMultiplier: 1.0,
+      nextCrashTime: Date.now() + (10 + Math.random() * 10) * 60 * 1000
+    };
+
+    function calculateStockPrice(stock, timeMs) {
+      const timeSec = timeMs / 1000;
+      const seed = hashString(stock.symbol);
+      const noiseTime = timeSec * 0.05 + seed;
+      const noiseVal = fbm(noiseTime, 4);
+      const fluctuation = Math.exp(noiseVal * stock.volatility * 3);
+      return stock.initialPrice * fluctuation * globalMarketState.crashMultiplier;
+    }
+
+    // Load saved game or initialize
     const savedState = localStorage.getItem('stocksim_game_save');
     let loadedState = null;
     if (savedState) {
@@ -383,21 +461,44 @@
         creditScore = loadedState.creditScore !== undefined ? loadedState.creditScore : 750;
         if (loadedState.stocksOwned) stocksOwned = loadedState.stocksOwned;
         if (loadedState.stockPurchasePrices) stockPurchasePrices = loadedState.stockPurchasePrices;
+        if (loadedState.globalMarketState) globalMarketState = loadedState.globalMarketState;
       } catch (e) {
         console.error("Error loading save", e);
       }
     }
 
     [...growthStocks, ...stableStocks].forEach(stock => {
-      if (loadedState && loadedState.stocks && loadedState.stocks[stock.symbol]) {
-        stock.price = loadedState.stocks[stock.symbol].price;
-        stock.change = loadedState.stocks[stock.symbol].change || 0;
-        stock.history = loadedState.stocks[stock.symbol].history;
+      stock.initialPrice = stock.price;
+
+      if (stock.symbol === 'KDP' && loadedState && loadedState.stocks && loadedState.stocks['KDP']) {
+        let savedPrice = loadedState.stocks['KDP'].price;
+        const history = loadedState.stocks['KDP'].history;
+        const lastTime = history && history.length > 0 ? history[history.length - 1].time : Date.now();
+        const ticksPassed = Math.max(0, Math.floor((Date.now() - lastTime) / 5000));
+
+        savedPrice += ticksPassed * 5.05; // 5.05 is the average of 0.1 to 10
+
+        stock.history = Array(20).fill(0).map((_, i) => {
+          const timeOffset = Date.now() - (19 - i) * 5000;
+          const p = savedPrice - (19 - i) * 5.05;
+          return { time: timeOffset, price: p };
+        });
+        stock.price = stock.history[19].price;
+        stock.change = stock.history[19].price - stock.history[18].price;
       } else {
-        stock.history = Array(20).fill(0).map((_, i) => ({
-          time: Date.now() - (20 - i) * 5000,
-          price: stock.price * (1 + (Math.random() - 0.5) * 0.1)
-        }));
+        // We overwrite history using the current time so it progresses seamlessly while offline
+        stock.history = Array(20).fill(0).map((_, i) => {
+          const timeOffset = Date.now() - (19 - i) * 5000;
+          let p;
+          if (stock.symbol === 'KDP') {
+            p = stock.initialPrice + (i * 5.05); // Initial fake history
+          } else {
+            p = calculateStockPrice(stock, timeOffset);
+          }
+          return { time: timeOffset, price: p };
+        });
+        stock.price = stock.history[19].price;
+        stock.change = stock.history[19].price - stock.history[18].price;
       }
 
       if (stocksOwned[stock.symbol] === undefined) stocksOwned[stock.symbol] = 0;
@@ -411,6 +512,7 @@
         creditScore,
         stocksOwned,
         stockPurchasePrices,
+        globalMarketState,
         stocks: {}
       };
 
@@ -425,18 +527,41 @@
       localStorage.setItem('stocksim_game_save', JSON.stringify(gameState));
     }
 
-    function updateStockPrice(stock) {
-      if (stock.volatility > 0) {
-        const noise = (Math.random() - 0.5) * 2;
-        const trend = Math.sin(Date.now() / 10000000) * 0.01;
-        const change = stock.price * (noise * stock.volatility + trend);
-        stock.price = Math.max(stock.price + change, 0.01);
-        stock.change = change;
-      } else {
-        const change = stock.price * 0.01;
-        stock.price = stock.price + change;
-        stock.change = change;
+    function updateMarketCrash() {
+      const now = Date.now();
+      if (now >= globalMarketState.nextCrashTime && globalMarketState.crashMultiplier >= 1.0) {
+        globalMarketState.crashMultiplier = 0.3 + Math.random() * 0.4;
+        globalMarketState.nextCrashTime = now + (10 + Math.random() * 10) * 60 * 1000;
+        console.log("Market Crash! Next one at " + new Date(globalMarketState.nextCrashTime));
+
+        const toast = document.getElementById('crash-toast');
+        if (toast) {
+          toast.classList.add('show');
+          setTimeout(() => {
+            toast.classList.remove('show');
+          }, 5000);
+        }
       }
+
+      if (globalMarketState.crashMultiplier < 1.0) {
+        globalMarketState.crashMultiplier += 0.01;
+        if (globalMarketState.crashMultiplier > 1.0) {
+          globalMarketState.crashMultiplier = 1.0;
+        }
+      }
+    }
+
+    function updateStockPrice(stock) {
+      const oldPrice = stock.price;
+
+      if (stock.symbol === 'KDP') {
+        const gain = 0.1 + Math.random() * 9.9; // 0.1 to 10
+        stock.price = stock.price + gain;
+      } else {
+        stock.price = calculateStockPrice(stock, Date.now());
+      }
+
+      stock.change = stock.price - oldPrice;
 
       stock.history.push({ time: Date.now(), price: stock.price });
       if (stock.history.length > 20) stock.history.shift();
@@ -531,11 +656,11 @@
     }
 
     function updateStocks() {
-      let stocks = [];
-      if (currentTab === 'growth') stocks = growthStocks;
-      else if (currentTab === 'stable') stocks = stableStocks;
+      updateMarketCrash();
 
-      stocks.forEach(updateStockPrice);
+      // Update ALL stocks so background tabs stay accurate
+      [...growthStocks, ...stableStocks].forEach(updateStockPrice);
+
       renderStocks();
       updateUserInfo();
       saveGame();
