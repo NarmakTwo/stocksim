@@ -744,7 +744,20 @@
     function updateUserInfo() {
       document.getElementById('user-balance').textContent = userBalance.toFixed(2);
       document.getElementById('user-debt').textContent = userDebt.toFixed(2);
-      document.getElementById('total-balance').textContent = (userBalance - userDebt).toFixed(2);
+
+      // Calculate total value of stock portfolio
+      let totalStockValue = 0;
+      const allStocks = [...growthStocks, ...stableStocks];
+      
+      allStocks.forEach(stock => {
+        const shares = stocksOwned[stock.symbol] || 0;
+        totalStockValue += shares * stock.price;
+      });
+
+      // Net worth = Cash + Stock Value - Debt
+      const netWorth = userBalance + totalStockValue - userDebt;
+      document.getElementById('total-balance').textContent = netWorth.toFixed(2);
+      
       document.getElementById('credit-score').textContent = creditScore;
     }
 
