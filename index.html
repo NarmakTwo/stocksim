@@ -447,13 +447,15 @@
       const noiseTime = timeSec * 0.05 + seed;
       const noiseVal = fbm(noiseTime, 4);
       
-      // NEW: This creates a very slight 0.01% upward pressure per tick
-      const drift = 1 + (timeSec * 0.00001); 
+      // 1. Remove the old 'drift = 1 + timeSec' line entirely.
+    
+      // 2. Add a constant 'bias' here (e.g., 0.15).
+      // This shifts the random wave so it's centered slightly positive.
+      const bias = 0.15; 
+      const fluctuation = Math.exp((noiseVal + bias) * stock.volatility * 3);
       
-      const fluctuation = Math.exp(noiseVal * stock.volatility * 3);
-      
-      // KDP now uses this unified formula, including the crash multiplier
-      return stock.initialPrice * fluctuation * drift * globalMarketState.crashMultiplier;
+      // 3. Return the price without the time-based multiplier.
+      return stock.initialPrice * fluctuation * globalMarketState.crashMultiplier;
     }
 
     // Load saved game or initialize
