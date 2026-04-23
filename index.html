@@ -413,26 +413,29 @@
   </div>
 
   <div id="app">
+    <div class="header" style="margin-bottom: 0;">
+      <h1 style="margin-top: 0;">Advanced Stock Market Simulator</h1>
+    </div>
+
     <div class="sticky-header">
-      <div class="header">
-        <h1>Advanced Stock Market Simulator</h1>
-        <div id="user-info">
-          <span>Balance: $<span id="user-balance">10000.00</span></span>
-          <span>Debt: $<span id="user-debt">0.00</span></span>
-          <span>Net Worth: $<span id="total-balance">10000.00</span></span>
-          <span>Credit Score: <span id="credit-score">750</span></span>
-        </div>
+      <div id="user-info">
+        <span>Balance: $<span id="user-balance">10000.00</span></span>
+        <span>Debt: $<span id="user-debt">0.00</span></span>
+        <span>Net Worth: $<span id="total-balance">10000.00</span></span>
+        <span>Credit Score: <span id="credit-score">750</span></span>
       </div>
 
       <div class="tab-container">
         <button class="tab-button active" data-tab="growth">Growth Stocks</button>
         <button class="tab-button" data-tab="stable">Stable Stocks</button>
+        <button class="tab-button" data-tab="crypto">Crypto</button>
         <button class="tab-button" id="gambling-tab-btn" data-tab="gambling" style="display: none;">Gambling</button>
       </div>
     </div>
 
     <div id="growth-stocks" class="stock-grid"></div>
     <div id="stable-stocks" class="stock-grid" style="display: none;"></div>
+    <div id="crypto-stocks" class="stock-grid" style="display: none;"></div>
     <div id="gambling-stocks" class="stock-grid" style="display: none;"></div>
   </div>
 
@@ -463,6 +466,19 @@
       { symbol: 'ZM', name: 'Zoom Video Communications', price: 280.90, volatility: 0.27 },
       { symbol: 'PYPL', name: 'PayPal Holdings Inc.', price: 270.30, volatility: 0.19 },
       { symbol: 'TWLO', name: 'Twilio Inc.', price: 350.20, volatility: 0.21 }
+    ];
+
+    const cryptoStocks = [
+      { symbol: 'BTC', name: 'Bitcoin', price: 45000.50, volatility: 0.90 },
+      { symbol: 'ETH', name: 'Ethereum', price: 3000.25, volatility: 1.10 },
+      { symbol: 'DOGE', name: 'Dogecoin', price: 0.15, volatility: 2.50 },
+      { symbol: 'SHIB', name: 'Shiba Inu', price: 0.00003, volatility: 3.00 },
+      { symbol: 'SOL', name: 'Solana', price: 100.50, volatility: 1.50 },
+      { symbol: 'ADA', name: 'Cardano', price: 1.20, volatility: 1.20 },
+      { symbol: 'XRP', name: 'Ripple', price: 0.80, volatility: 1.00 },
+      { symbol: 'LUNA', name: 'Terra', price: 50.00, volatility: 2.00 },
+      { symbol: 'XMR', name: 'Monero', price: 200.00, volatility: 0.50 },
+      { symbol: 'BNB', name: 'Binance Coin', price: 400.00, volatility: 0.85 }
     ];
 
     const stableStocks = [
@@ -562,7 +578,7 @@
       }
     }
 
-    [...growthStocks, ...stableStocks].forEach(stock => {
+    [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(stock => {
       stock.initialPrice = stock.price;
 
       // We overwrite history using the current time so it progresses seamlessly while offline
@@ -590,7 +606,7 @@
         stocks: {}
       };
 
-      [...growthStocks, ...stableStocks].forEach(stock => {
+      [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(stock => {
         gameState.stocks[stock.symbol] = {
           price: stock.price,
           change: stock.change,
@@ -708,6 +724,7 @@
       let stocks = [];
       if (currentTab === 'growth') stocks = growthStocks;
       else if (currentTab === 'stable') stocks = stableStocks;
+      else if (currentTab === 'crypto') stocks = cryptoStocks;
 
       const container = document.getElementById(`${currentTab}-stocks`);
 
@@ -728,7 +745,7 @@
       updateMarketCrash();
 
       // Update ALL stocks so background tabs stay accurate
-      [...growthStocks, ...stableStocks].forEach(updateStockPrice);
+      [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(updateStockPrice);
 
       renderStocks();
       updateUserInfo();
@@ -736,7 +753,7 @@
     }
 
     function buyStock(symbol, amount = null) {
-      const stock = [...growthStocks, ...stableStocks].find(s => s.symbol === symbol);
+      const stock = [...growthStocks, ...stableStocks, ...cryptoStocks].find(s => s.symbol === symbol);
       if (amount === null) amount = parseFloat(prompt(`Enter the amount to invest in ${symbol}:`, '100'));
 
       if (isNaN(amount) || amount <= 0) {
@@ -770,7 +787,7 @@
     }
 
     function sellStock(symbol, amount = null) {
-      const stock = [...growthStocks, ...stableStocks].find(s => s.symbol === symbol);
+      const stock = [...growthStocks, ...stableStocks, ...cryptoStocks].find(s => s.symbol === symbol);
       const maxShares = stocksOwned[symbol] || 0;
 
       if (maxShares === 0) {
@@ -806,7 +823,7 @@
     }
 
     function sellMaxStock(symbol) {
-      const stock = [...growthStocks, ...stableStocks].find(s => s.symbol === symbol);
+      const stock = [...growthStocks, ...stableStocks, ...cryptoStocks].find(s => s.symbol === symbol);
       sellStock(symbol, stocksOwned[symbol]);
     }
 
@@ -816,7 +833,7 @@
 
       // Calculate total value of stock portfolio
       let totalStockValue = 0;
-      const allStocks = [...growthStocks, ...stableStocks];
+      const allStocks = [...growthStocks, ...stableStocks, ...cryptoStocks];
       
       allStocks.forEach(stock => {
         const shares = stocksOwned[stock.symbol] || 0;
@@ -837,6 +854,7 @@
         button.classList.add('active');
         document.getElementById('growth-stocks').style.display = 'none';
         document.getElementById('stable-stocks').style.display = 'none';
+        document.getElementById('crypto-stocks').style.display = 'none';
         document.getElementById('gambling-stocks').style.display = 'none';
         currentTab = button.dataset.tab;
         document.getElementById(`${currentTab}-stocks`).style.display = 'grid';
@@ -939,7 +957,7 @@
         creditScore = 750;
         activeLoan = null;
 
-        [...growthStocks, ...stableStocks].forEach(stock => {
+        [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(stock => {
           stocksOwned[stock.symbol] = 0;
           stockPurchasePrices[stock.symbol] = 0;
         });
@@ -985,22 +1003,25 @@
         return;
       }
       
+      const interest = amount * 0.025; // 2.5% interest
+      const totalOwed = amount + interest;
+
       userBalance += amount;
-      userDebt += amount;
+      userDebt += totalOwed;
       
       // Dynamic loan duration based on loan amount and credit score
       // A $10,000 loan with a 750 credit score gives exactly 180 seconds (3 minutes)
       const timeToPay = Math.floor(60 + (amount / 10000) * 60 + (creditScore / 750) * 60);
       
       activeLoan = {
-        amount: amount,
-        originalAmount: amount,
+        amount: totalOwed,
+        originalAmount: totalOwed,
         dueDate: Date.now() + timeToPay * 1000,
         lastPenaltyTime: Date.now()
       };
       
       bankMessage.style.color = "#28a745";
-      bankMessage.textContent = `Accepted! You have ${timeToPay}s to pay it back.`;
+      bankMessage.textContent = `Accepted! Total owed: $${totalOwed.toFixed(2)}. You have ${timeToPay}s to pay it back.`;
       
       updateUserInfo();
       saveGame();
@@ -1046,7 +1067,7 @@
         
         // Auto-sell and resolve if 60 seconds late
         if (now - activeLoan.dueDate > 60 * 1000) {
-          [...growthStocks, ...stableStocks].forEach(stock => {
+          [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(stock => {
             if (stocksOwned[stock.symbol] > 0) {
               userBalance += stocksOwned[stock.symbol] * stock.price;
               stocksOwned[stock.symbol] = 0;
