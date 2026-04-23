@@ -479,7 +479,7 @@
           Bet BLACK (2x)</button>
         <button id="bet-green-btn"
           style="background-color: #28a745; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟩
-          Bet JACKPOT (10x)</button>
+          Bet JACKPOT (1000x)</button>
       </div>
 
       <div id="roulette-result"
@@ -1270,7 +1270,7 @@
       setTimeout(() => {
         let winnings = 0;
         if (betColor === outcomeColor) {
-          winnings = (betColor === 'green') ? amount * 10 : amount * 2;
+          winnings = (betColor === 'green') ? amount * 1000 : amount * 2;
           userBalance += winnings;
           resultDiv.style.color = "#28a745";
           resultDiv.textContent = `Landed on ${outcomeColor.toUpperCase()} (Roll: ${roll})! You won $${winnings.toFixed(2)}!`;
