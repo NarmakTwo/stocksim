@@ -311,12 +311,27 @@
       border: none;
     }
 
+    .gambling-panel {
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+
     body.dark-mode .stock-card,
     body.dark-mode .settings-menu,
     body.dark-mode .bank-menu,
-    body.dark-mode .debt-timer-card {
+    body.dark-mode .debt-timer-card,
+    body.dark-mode .gambling-panel {
       background-color: #1f2937;
       border-color: #374151;
+      color: #e5e7eb;
+    }
+
+    body.dark-mode input[type="number"] {
+      background-color: #374151;
+      border-color: #4b5563;
       color: #e5e7eb;
     }
 
@@ -436,7 +451,27 @@
     <div id="growth-stocks" class="stock-grid"></div>
     <div id="stable-stocks" class="stock-grid" style="display: none;"></div>
     <div id="crypto-stocks" class="stock-grid" style="display: none;"></div>
-    <div id="gambling-stocks" class="stock-grid" style="display: none;"></div>
+    <div id="gambling-stocks" class="gambling-panel" style="display: none;">
+      <h2 style="margin-top: 0;">🎰 Roulette</h2>
+      <p>Place your bet and test your luck! The wheel has 18 Red, 18 Black, and 1 Green (Jackpot).</p>
+      
+      <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 30px auto;">
+        <canvas id="roulette-wheel" width="300" height="300" style="border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 3s cubic-bezier(0.25, 0.1, 0.15, 1); display: block;"></canvas>
+        <div style="position: absolute; top: -15px; left: 140px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 25px solid #ffcc00; z-index: 10; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+        <label>Bet Amount: $<input type="number" id="roulette-bet" min="1" step="10" value="100" style="width: 120px; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;"></label>
+      </div>
+
+      <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+        <button id="bet-red-btn" style="background-color: #dc3545; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟥 Bet RED (2x)</button>
+        <button id="bet-black-btn" style="background-color: #343a40; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">⬛ Bet BLACK (2x)</button>
+        <button id="bet-green-btn" style="background-color: #28a745; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟩 Bet JACKPOT (10x)</button>
+      </div>
+
+      <div id="roulette-result" style="font-size: 1.5em; font-weight: bold; margin-top: 20px; min-height: 40px; text-align: center;"></div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
@@ -721,6 +756,8 @@
     }
 
     function renderStocks() {
+      if (currentTab === 'gambling') return; // Do not overwrite gambling tab
+
       let stocks = [];
       if (currentTab === 'growth') stocks = growthStocks;
       else if (currentTab === 'stable') stocks = stableStocks;
@@ -857,8 +894,13 @@
         document.getElementById('crypto-stocks').style.display = 'none';
         document.getElementById('gambling-stocks').style.display = 'none';
         currentTab = button.dataset.tab;
-        document.getElementById(`${currentTab}-stocks`).style.display = 'grid';
-        renderStocks();
+        const container = document.getElementById(`${currentTab}-stocks`);
+        if (currentTab === 'gambling') {
+          container.style.display = 'block';
+        } else {
+          container.style.display = 'grid';
+          renderStocks();
+        }
       });
     });
 
@@ -1122,7 +1164,111 @@
     setInterval(updateDebtTimer, 1000);
     // Initialize timer state on load
     updateDebtTimer();
+
+    // Roulette Logic
+    let currentRotation = 0;
+    
+    function drawWheel() {
+      const canvas = document.getElementById('roulette-wheel');
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = centerX;
+      const arc = Math.PI * 2 / 37;
+
+      for (let i = 0; i < 37; i++) {
+        ctx.beginPath();
+        if (i === 0) ctx.fillStyle = '#28a745'; // Green
+        else if (i % 2 === 0) ctx.fillStyle = '#343a40'; // Black
+        else ctx.fillStyle = '#dc3545'; // Red
+        
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, i * arc, (i + 1) * arc);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw text
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(i * arc + arc / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px monospace';
+        ctx.fillText(i, radius - 10, 4);
+        ctx.restore();
+      }
+    }
+    drawWheel();
+
+    function playRoulette(betColor) {
+      const betInput = document.getElementById('roulette-bet');
+      const resultDiv = document.getElementById('roulette-result');
+      const amount = parseFloat(betInput.value);
+
+      if (isNaN(amount) || amount <= 0) {
+        resultDiv.style.color = "#dc3545";
+        resultDiv.textContent = "Please enter a valid bet amount.";
+        return;
+      }
+
+      if (amount > userBalance) {
+        resultDiv.style.color = "#dc3545";
+        resultDiv.textContent = "Insufficient funds!";
+        return;
+      }
+
+      // Deduct bet amount
+      userBalance -= amount;
+
+      const roll = Math.floor(Math.random() * 37);
+      let outcomeColor = '';
+      if (roll === 0) outcomeColor = 'green';
+      else if (roll % 2 === 0) outcomeColor = 'black';
+      else outcomeColor = 'red';
+
+      resultDiv.textContent = "Spinning...";
+      resultDiv.style.color = "inherit";
+
+      const sliceAngle = 360 / 37;
+      const targetRotationOffset = -90 - (roll * sliceAngle + sliceAngle / 2);
+      const randomJitter = (Math.random() - 0.5) * (sliceAngle * 0.8);
+      
+      currentRotation += 360 * 5; // 5 extra spins
+      let targetPos = (targetRotationOffset + randomJitter) % 360;
+      if (targetPos < 0) targetPos += 360;
+      let currentPos = currentRotation % 360;
+      if (currentPos < 0) currentPos += 360;
+      let diff = targetPos - currentPos;
+      if (diff < 0) diff += 360;
+      currentRotation += diff;
+
+      document.getElementById('roulette-wheel').style.transform = `rotate(${currentRotation}deg)`;
+
+      const btns = [document.getElementById('bet-red-btn'), document.getElementById('bet-black-btn'), document.getElementById('bet-green-btn')];
+      btns.forEach(b => b.disabled = true);
+
+      setTimeout(() => {
+        let winnings = 0;
+        if (betColor === outcomeColor) {
+          winnings = (betColor === 'green') ? amount * 10 : amount * 2;
+          userBalance += winnings;
+          resultDiv.style.color = "#28a745";
+          resultDiv.textContent = `Landed on ${outcomeColor.toUpperCase()} (Roll: ${roll})! You won $${winnings.toFixed(2)}!`;
+        } else {
+          resultDiv.style.color = "#dc3545";
+          resultDiv.textContent = `Landed on ${outcomeColor.toUpperCase()} (Roll: ${roll}). You lost $${amount.toFixed(2)}.`;
+        }
+        btns.forEach(b => b.disabled = false);
+        updateUserInfo();
+        saveGame();
+      }, 3000);
+      
+      updateUserInfo();
+    }
+
+    document.getElementById('bet-red-btn').addEventListener('click', () => playRoulette('red'));
+    document.getElementById('bet-black-btn').addEventListener('click', () => playRoulette('black'));
+    document.getElementById('bet-green-btn').addEventListener('click', () => playRoulette('green'));
   </script>
 </body>
-
 </html>
