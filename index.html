@@ -382,7 +382,7 @@
     const stableStocks = [
       { symbol: 'SPY', name: 'S&P 500 ETF', price: 450.75, volatility: 0.05 },
       { symbol: 'VTI', name: 'Vanguard Total Market', price: 220.40, volatility: 0.04 },
-      { symbol: 'KDP', name: 'Keurig Dr Pepper Inc.', price: 137, volatility: 0.00001 },
+      { symbol: 'KDP', name: 'Keurig Dr Pepper Inc.', price: 137, volatility: 0.03 },
       { symbol: 'JNJ', name: 'Johnson & Johnson', price: 170.50, volatility: 0.06 },
       { symbol: 'PG', name: 'Procter & Gamble', price: 140.85, volatility: 0.05 },
       { symbol: 'KO', name: 'Coca-Cola Company', price: 55.30, volatility: 0.04 },
@@ -446,8 +446,14 @@
       const seed = hashString(stock.symbol);
       const noiseTime = timeSec * 0.05 + seed;
       const noiseVal = fbm(noiseTime, 4);
+      
+      // NEW: This creates a very slight 0.01% upward pressure per tick
+      const drift = 1 + (timeSec * 0.00001); 
+      
       const fluctuation = Math.exp(noiseVal * stock.volatility * 3);
-      return stock.initialPrice * fluctuation * globalMarketState.crashMultiplier;
+      
+      // KDP now uses this unified formula, including the crash multiplier
+      return stock.initialPrice * fluctuation * drift * globalMarketState.crashMultiplier;
     }
 
     // Load saved game or initialize
@@ -553,16 +559,11 @@
 
     function updateStockPrice(stock) {
       const oldPrice = stock.price;
-
-      if (stock.symbol === 'KDP') {
-        const gain = 0.1 + Math.random() * 9.9; // 0.1 to 10
-        stock.price = stock.price + gain;
-      } else {
-        stock.price = calculateStockPrice(stock, Date.now());
-      }
-
+    
+      // REMOVED: The old "gain = 0.1 + Math.random() * 9.9" logic is gone.
+      stock.price = calculateStockPrice(stock, Date.now());
+    
       stock.change = stock.price - oldPrice;
-
       stock.history.push({ time: Date.now(), price: stock.price });
       if (stock.history.length > 20) stock.history.shift();
     }
