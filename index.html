@@ -218,7 +218,7 @@
 
     /* Settings button and menu */
     .settings-btn {
-      position: absolute;
+      position: fixed;
       top: 20px;
       left: 20px;
       background: none;
@@ -230,7 +230,7 @@
 
     .settings-menu {
       display: none;
-      position: absolute;
+      position: fixed;
       top: 60px;
       left: 20px;
       background: white;
@@ -247,7 +247,7 @@
 
     /* Bank styles */
     .bank-btn {
-      position: absolute;
+      position: fixed;
       top: 20px;
       right: 20px;
       background: none;
@@ -259,7 +259,7 @@
 
     .bank-menu {
       display: none;
-      position: absolute;
+      position: fixed;
       top: 60px;
       right: 20px;
       background: white;
@@ -318,6 +318,21 @@
       background-color: #1f2937;
       border-color: #374151;
       color: #e5e7eb;
+    }
+
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      background-color: white;
+      z-index: 900;
+      padding-top: 20px;
+      margin-top: -20px;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+
+    body.dark-mode .sticky-header {
+      background-color: #111827;
     }
 
     body.dark-mode .tab-button.active {
@@ -398,20 +413,22 @@
   </div>
 
   <div id="app">
-    <div class="header">
-      <h1>Advanced Stock Market Simulator</h1>
-      <div id="user-info">
-        <span>Balance: $<span id="user-balance">10000.00</span></span>
-        <span>Debt: $<span id="user-debt">0.00</span></span>
-        <span>Net Worth: $<span id="total-balance">10000.00</span></span>
-        <span>Credit Score: <span id="credit-score">750</span></span>
+    <div class="sticky-header">
+      <div class="header">
+        <h1>Advanced Stock Market Simulator</h1>
+        <div id="user-info">
+          <span>Balance: $<span id="user-balance">10000.00</span></span>
+          <span>Debt: $<span id="user-debt">0.00</span></span>
+          <span>Net Worth: $<span id="total-balance">10000.00</span></span>
+          <span>Credit Score: <span id="credit-score">750</span></span>
+        </div>
       </div>
-    </div>
 
-    <div class="tab-container">
-      <button class="tab-button active" data-tab="growth">Growth Stocks</button>
-      <button class="tab-button" data-tab="stable">Stable Stocks</button>
-      <button class="tab-button" id="gambling-tab-btn" data-tab="gambling" style="display: none;">Gambling</button>
+      <div class="tab-container">
+        <button class="tab-button active" data-tab="growth">Growth Stocks</button>
+        <button class="tab-button" data-tab="stable">Stable Stocks</button>
+        <button class="tab-button" id="gambling-tab-btn" data-tab="gambling" style="display: none;">Gambling</button>
+      </div>
     </div>
 
     <div id="growth-stocks" class="stock-grid"></div>
