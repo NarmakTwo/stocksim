@@ -407,7 +407,7 @@
       <button id="reset-settings-btn" style="background-color: #6c757d; color: white;">Reset Settings</button>
       <button id="clear-cache-btn" style="background-color: #dc3545; color: white;">Clear Game Cache</button>
     </div>
-    </div>
+  </div>
   </div>
 
   <button id="bank-btn" class="bank-btn">🏦</button>
@@ -415,7 +415,8 @@
     <h3 style="margin-top: 0;">Bank</h3>
     <p>Credit Score: <span id="bank-credit-score">750</span></p>
     <label>Loan Amount ($):</label>
-    <input type="number" id="loan-amount-input" min="1" step="100" style="width: 100%; margin-bottom: 10px; box-sizing: border-box; padding: 5px;">
+    <input type="number" id="loan-amount-input" min="1" step="100"
+      style="width: 100%; margin-bottom: 10px; box-sizing: border-box; padding: 5px;">
     <button id="request-loan-btn" style="width: 100%; background-color: #007bff; color: white;">Request Loan</button>
     <p id="bank-message" style="margin-top: 10px; font-size: 0.9em;"></p>
   </div>
@@ -424,7 +425,9 @@
     <h4 style="margin-top: 0; margin-bottom: 5px;">Active Loan</h4>
     <div style="font-family: 'Roboto Mono', monospace;">Owe: $<span id="debt-amount-display">0.00</span></div>
     <div style="font-family: 'Roboto Mono', monospace;">Time left: <span id="debt-time-left">0</span>s</div>
-    <button id="pay-debt-btn" style="width: 100%; margin-top: 10px; background-color: #28a745; color: white; padding: 4px; border: none; border-radius: 4px; cursor: pointer;">Pay Loan</button>
+    <button id="pay-debt-btn"
+      style="width: 100%; margin-top: 10px; background-color: #28a745; color: white; padding: 4px; border: none; border-radius: 4px; cursor: pointer;">Pay
+      Loan</button>
   </div>
 
   <div id="app">
@@ -452,25 +455,35 @@
     <div id="stable-stocks" class="stock-grid" style="display: none;"></div>
     <div id="crypto-stocks" class="stock-grid" style="display: none;"></div>
     <div id="gambling-stocks" class="gambling-panel" style="display: none;">
-      <h2 style="margin-top: 0;">🎰 Roulette</h2>
-      <p>Place your bet and test your luck! The wheel has 18 Red, 18 Black, and 1 Green (Jackpot).</p>
-      
+      <h2 style="margin-top: 0;">Roulette</h2>
+
       <div style="position: relative; width: 300px; height: 300px; margin: 0 auto 30px auto;">
-        <canvas id="roulette-wheel" width="300" height="300" style="border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 3s cubic-bezier(0.25, 0.1, 0.15, 1); display: block;"></canvas>
-        <div style="position: absolute; top: -15px; left: 140px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 25px solid #ffcc00; z-index: 10; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></div>
+        <canvas id="roulette-wheel" width="300" height="300"
+          style="border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 3s cubic-bezier(0.25, 0.1, 0.15, 1); display: block;"></canvas>
+        <div
+          style="position: absolute; top: -15px; left: 140px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-top: 25px solid #ffcc00; z-index: 10; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));">
+        </div>
       </div>
 
       <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-        <label>Bet Amount: $<input type="number" id="roulette-bet" min="1" step="10" value="100" style="width: 120px; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;"></label>
+        <label>Bet Amount: $<input type="number" id="roulette-bet" min="1" step="10" value="100"
+            style="width: 120px; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;"></label>
       </div>
 
       <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
-        <button id="bet-red-btn" style="background-color: #dc3545; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟥 Bet RED (2x)</button>
-        <button id="bet-black-btn" style="background-color: #343a40; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">⬛ Bet BLACK (2x)</button>
-        <button id="bet-green-btn" style="background-color: #28a745; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟩 Bet JACKPOT (10x)</button>
+        <button id="bet-red-btn"
+          style="background-color: #dc3545; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟥
+          Bet RED (2x)</button>
+        <button id="bet-black-btn"
+          style="background-color: #343a40; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">⬛
+          Bet BLACK (2x)</button>
+        <button id="bet-green-btn"
+          style="background-color: #28a745; color: white; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 5px; border: none; cursor: pointer; flex: 1;">🟩
+          Bet JACKPOT (10x)</button>
       </div>
 
-      <div id="roulette-result" style="font-size: 1.5em; font-weight: bold; margin-top: 20px; min-height: 40px; text-align: center;"></div>
+      <div id="roulette-result"
+        style="font-size: 1.5em; font-weight: bold; margin-top: 20px; min-height: 40px; text-align: center;"></div>
     </div>
   </div>
 
@@ -583,14 +596,14 @@
       const seed = hashString(stock.symbol);
       const noiseTime = timeSec * 0.05 + seed;
       const noiseVal = fbm(noiseTime, 4);
-      
+
       // 1. Remove the old 'drift = 1 + timeSec' line entirely.
-    
+
       // 2. Add a constant 'bias' here (e.g., 0.15).
       // This shifts the random wave so it's centered slightly positive.
-      const bias = 0.15; 
+      const bias = 0.15;
       const fluctuation = Math.exp((noiseVal + bias) * stock.volatility * 3);
-      
+
       // 3. Return the price without the time-based multiplier.
       return stock.initialPrice * fluctuation * globalMarketState.crashMultiplier;
     }
@@ -678,10 +691,10 @@
 
     function updateStockPrice(stock) {
       const oldPrice = stock.price;
-    
+
       // REMOVED: The old "gain = 0.1 + Math.random() * 9.9" logic is gone.
       stock.price = calculateStockPrice(stock, Date.now());
-    
+
       stock.change = stock.price - oldPrice;
       stock.history.push({ time: Date.now(), price: stock.price });
       if (stock.history.length > 20) stock.history.shift();
@@ -871,7 +884,7 @@
       // Calculate total value of stock portfolio
       let totalStockValue = 0;
       const allStocks = [...growthStocks, ...stableStocks, ...cryptoStocks];
-      
+
       allStocks.forEach(stock => {
         const shares = stocksOwned[stock.symbol] || 0;
         totalStockValue += shares * stock.price;
@@ -880,7 +893,7 @@
       // Net worth = Cash + Stock Value - Debt
       const netWorth = userBalance + totalStockValue - userDebt;
       document.getElementById('total-balance').textContent = netWorth.toFixed(2);
-      
+
       document.getElementById('credit-score').textContent = creditScore;
     }
 
@@ -1031,40 +1044,40 @@
         bankMessage.textContent = "Invalid amount.";
         return;
       }
-      
+
       if (activeLoan || userDebt > 0) {
         bankMessage.style.color = "#dc3545";
         bankMessage.textContent = "You already have active debt!";
         return;
       }
-      
+
       const maxLoan = Math.max(0, Math.floor(creditScore * (10000 / 750) / 100) * 100);
       if (amount > maxLoan) {
         bankMessage.style.color = "#dc3545";
         bankMessage.textContent = `Denied. Max loan is $${maxLoan}.`;
         return;
       }
-      
+
       const interest = amount * 0.025; // 2.5% interest
       const totalOwed = amount + interest;
 
       userBalance += amount;
       userDebt += totalOwed;
-      
+
       // Dynamic loan duration based on loan amount and credit score
       // A $10,000 loan with a 750 credit score gives exactly 180 seconds (3 minutes)
       const timeToPay = Math.floor(60 + (amount / 10000) * 60 + (creditScore / 750) * 60);
-      
+
       activeLoan = {
         amount: totalOwed,
         originalAmount: totalOwed,
         dueDate: Date.now() + timeToPay * 1000,
         lastPenaltyTime: Date.now()
       };
-      
+
       bankMessage.style.color = "#28a745";
       bankMessage.textContent = `Accepted! Total owed: $${totalOwed.toFixed(2)}. You have ${timeToPay}s to pay it back.`;
-      
+
       updateUserInfo();
       saveGame();
       updateDebtTimer();
@@ -1073,7 +1086,7 @@
     payDebtBtn.addEventListener('click', () => {
       if (userBalance >= userDebt && userDebt > 0) {
         userBalance -= userDebt;
-        
+
         if (activeLoan) {
           const now = Date.now();
           if (now <= activeLoan.dueDate) {
@@ -1081,7 +1094,7 @@
             if (creditScore > 1000) creditScore = 1000;
           }
         }
-        
+
         userDebt = 0;
         activeLoan = null;
         updateUserInfo();
@@ -1099,14 +1112,14 @@
         return;
       }
       card.classList.add('show');
-      
+
       const now = Date.now();
       let timeLeft = Math.floor((activeLoan.dueDate - now) / 1000);
-      
+
       if (timeLeft <= 0) {
         timeLeft = 0;
         document.getElementById('debt-time-left').style.color = "#dc3545";
-        
+
         // Auto-sell and resolve if 60 seconds late
         if (now - activeLoan.dueDate > 60 * 1000) {
           [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(stock => {
@@ -1116,7 +1129,7 @@
               stockPurchasePrices[stock.symbol] = 0;
             }
           });
-          
+
           if (userBalance >= userDebt) {
             userBalance -= userDebt;
             userDebt = 0;
@@ -1130,34 +1143,41 @@
             creditScore = 300;
             alert("You defaulted on your loan! The bank auto-sold your stocks and seized your assets, leaving you with $10.");
           }
-          
+
           updateUserInfo();
           renderStocks();
           saveGame();
-          
+
           document.getElementById('debt-timer-card').classList.remove('show');
           return;
         }
 
         // Apply late penalty every second
         if (now - activeLoan.lastPenaltyTime >= 1000) {
-           // Terrible late fees: 1% of original debt per second
-           userDebt += activeLoan.originalAmount * 0.01;
-           activeLoan.amount = userDebt;
-           
-           // Decrease credit score
-           creditScore -= 2;
-           if (creditScore < 300) creditScore = 300;
-           
-           activeLoan.lastPenaltyTime = now;
-           updateUserInfo();
-           saveGame();
+          // Terrible late fees: 1% of original debt per second
+          userDebt += activeLoan.originalAmount * 0.01;
+          activeLoan.amount = userDebt;
+
+          // Decrease credit score
+          creditScore -= 2;
+          if (creditScore < 300) creditScore = 300;
+
+          activeLoan.lastPenaltyTime = now;
+          updateUserInfo();
+          saveGame();
         }
       } else {
         document.getElementById('debt-time-left').style.color = "inherit";
       }
-      
-      document.getElementById('debt-amount-display').textContent = userDebt.toFixed(2);
+
+      const debtAmountDisplay = document.getElementById('debt-amount-display');
+      debtAmountDisplay.textContent = userDebt.toFixed(2);
+      if (userDebt > userBalance) {
+        debtAmountDisplay.style.color = "#dc3545";
+      } else {
+        debtAmountDisplay.style.color = "inherit";
+      }
+
       document.getElementById('debt-time-left').textContent = timeLeft;
     }
 
@@ -1167,7 +1187,7 @@
 
     // Roulette Logic
     let currentRotation = 0;
-    
+
     function drawWheel() {
       const canvas = document.getElementById('roulette-wheel');
       const ctx = canvas.getContext('2d');
@@ -1181,12 +1201,12 @@
         if (i === 0) ctx.fillStyle = '#28a745'; // Green
         else if (i % 2 === 0) ctx.fillStyle = '#343a40'; // Black
         else ctx.fillStyle = '#dc3545'; // Red
-        
+
         ctx.moveTo(centerX, centerY);
         ctx.arc(centerX, centerY, radius, i * arc, (i + 1) * arc);
         ctx.fill();
         ctx.stroke();
-        
+
         // Draw text
         ctx.save();
         ctx.translate(centerX, centerY);
@@ -1232,7 +1252,7 @@
       const sliceAngle = 360 / 37;
       const targetRotationOffset = -90 - (roll * sliceAngle + sliceAngle / 2);
       const randomJitter = (Math.random() - 0.5) * (sliceAngle * 0.8);
-      
+
       currentRotation += 360 * 5; // 5 extra spins
       let targetPos = (targetRotationOffset + randomJitter) % 360;
       if (targetPos < 0) targetPos += 360;
@@ -1262,7 +1282,7 @@
         updateUserInfo();
         saveGame();
       }, 3000);
-      
+
       updateUserInfo();
     }
 
@@ -1271,4 +1291,5 @@
     document.getElementById('bet-green-btn').addEventListener('click', () => playRoulette('green'));
   </script>
 </body>
+
 </html>
