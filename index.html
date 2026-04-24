@@ -797,6 +797,9 @@
       // Update ALL stocks so background tabs stay accurate
       [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(updateStockPrice);
 
+      // Add 0.025% interest to user balance
+      userBalance += userBalance * 0.00025;
+
       renderStocks();
       updateUserInfo();
       saveGame();
