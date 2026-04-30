@@ -548,6 +548,73 @@
       { symbol: 'COST', name: 'Costco Wholesale', price: 450.70, volatility: 0.05 }
     ];
 
+    /**
+     * Formats massive numbers into human-readable strings.
+     * Supports numbers far beyond a Googol using BigInt logic.
+     * 
+     * @param {number|string|bigint} val - The number to format.
+     */
+    function formatMassiveNumber(val) {
+      // Convert input to BigInt for precision
+      const bigNum = BigInt(val);
+      const absNum = bigNum < 0n ? -bigNum : bigNum;
+      const sign = bigNum < 0n ? "-" : "";
+    
+      // 1. Numbers under 1 Million (use commas)
+      if (absNum < 1000000n) {
+        return sign + absNum.toLocaleString('en-US');
+      }
+    
+      // 2. Define the tiers
+      // We use "power of 10" as the key.
+      const tiers = [
+        { pow: 3003n, label: "Millinillion" },
+        { pow: 303n, label: "Centillion" },
+        { pow: 100n, label: "Googol" }, // The legendary outlier
+        { pow: 93n, label: "Trigintillion" },
+        { pow: 63n, label: "Vigintillion" },
+        { pow: 33n, label: "Decillion" },
+        { pow: 30n, label: "Nonillion" },
+        { pow: 27n, label: "Octillion" },
+        { pow: 24n, label: "Septillion" },
+        { pow: 21n, label: "Sextillion" },
+        { pow: 18n, label: "Quintillion" },
+        { pow: 15n, label: "Quadrillion" },
+        { pow: 12n, label: "T" },
+        { pow: 9n, label: "B" },
+        { pow: 6n, label: "M" }
+      ];
+    
+      for (let i = 0; i < tiers.length; i++) {
+        const { pow, label } = tiers[i];
+        const divisor = 10n ** pow;
+    
+        if (absNum >= divisor) {
+          // Calculate the whole and fractional parts for display
+          // We take 3 digits of precision for the decimal
+          const whole = absNum / divisor;
+          const remainder = absNum % divisor;
+          
+          // Calculate decimals manually since BigInt doesn't do floats
+          let fractional = "";
+          if (remainder > 0n) {
+            // Move 2 digits of the remainder to the front for "decimals"
+            const precision = 100n; 
+            const dec = (remainder * precision) / divisor;
+            if (dec > 0n) {
+                fractional = "." + dec.toString().padStart(2, '0').replace(/0+$/, '');
+            }
+          }
+    
+          // Space only if label is a full word (more than 1 char)
+          const separator = label.length > 1 ? " " : "";
+          return sign + whole.toString() + fractional + separator + label;
+        }
+      }
+    
+      return bigNum.toString();
+    }
+    
     // Procedural Noise Functions
     function hashString(str) {
       let hash = 0;
@@ -881,8 +948,8 @@
     }
 
     function updateUserInfo() {
-      document.getElementById('user-balance').textContent = userBalance.toFixed(2);
-      document.getElementById('user-debt').textContent = userDebt.toFixed(2);
+      document.getElementById('user-balance').textContent = formatMassiveNumber(userBalance);
+      document.getElementById('user-debt').textContent = formatMassiveNumber(userDebt);
 
       // Calculate total value of stock portfolio
       let totalStockValue = 0;
@@ -895,7 +962,7 @@
 
       // Net worth = Cash + Stock Value - Debt
       const netWorth = userBalance + totalStockValue - userDebt;
-      document.getElementById('total-balance').textContent = netWorth.toFixed(2);
+      document.getElementById('total-balance').textContent = formatMassiveNumber(netWorth)
 
       document.getElementById('credit-score').textContent = creditScore;
     }
