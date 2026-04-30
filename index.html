@@ -783,7 +783,7 @@
             ${stock.change >= 0 ? '▲' : '▼'} $${Math.abs(stock.change).toFixed(2)}
           </div>
           <div class="stock-owned">
-            Owned: ${owned.toFixed(4)}
+            Owned: ${formatMassiveNumber(owned)}
             ${owned > 0 ? ` (${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}%)` : ''}
           </div>
           <div class="chart-container">
