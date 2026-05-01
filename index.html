@@ -415,7 +415,7 @@
     <h3 style="margin-top: 0;">Bank</h3>
     <p>Credit Score: <span id="bank-credit-score">750</span></p>
     <label>Loan Amount ($):</label>
-    <input type="number" id="loan-amount-input" min="1" step="100"
+    <input type="text" id="loan-amount-input" placeholder="e.g. 500, five hundred, 5e2"
       style="width: 100%; margin-bottom: 10px; box-sizing: border-box; padding: 5px;">
     <button id="request-loan-btn" style="width: 100%; background-color: #007bff; color: white;">Request Loan</button>
     <p id="bank-message" style="margin-top: 10px; font-size: 0.9em;"></p>
@@ -466,8 +466,8 @@
       </div>
 
       <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-        <label>Bet Amount: $<input type="number" id="roulette-bet" min="1" step="10" value="100"
-            style="width: 120px; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;"></label>
+        <label>Bet Amount: $<input type="text" id="roulette-bet" value="100" placeholder="e.g. 100, one hundred"
+            style="width: 160px; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;"></label>
       </div>
 
       <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -620,6 +620,99 @@
       // 7. Final assembly
       const space = unitName.length > 1 ? " " : "";
       return output + space + unitName;
+    }
+
+    function parseMassiveNumber(input) {
+      if (typeof input !== 'string') return Number(input);
+
+      // 1. Cleanup: lowercase, remove commas, and handle "and/plus"
+      let str = input.toLowerCase().replace(/,/g, '').replace(/\band\b|\+/g, ' ').trim();
+
+      // 2. Handle Scientific & Power Notation (e.g., "5 x 10^2" or "6.022e18")
+      str = str.replace(/(\d+\.?\d*)\s*x\s*10\^(\d+)/g, (m, base, exp) => base + 'e' + exp);
+
+      // 3. Handle Fractions (e.g., "2 fifths", "1/2")
+      const fractionMap = { half: 2, third: 3, fourth: 4, quarter: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10 };
+      str = str.replace(/(\d+)\s+([a-z]+)s?/g, (m, num, word) => {
+        if (fractionMap[word]) return (parseFloat(num) / fractionMap[word]).toString();
+        return m;
+      });
+      str = str.replace(/(\d+)\/(\d+)/g, (m, num, den) => (parseFloat(num) / parseFloat(den)).toString());
+
+      // 4. Word-to-Number Map (Simple digits)
+      const wordToNum = {
+        zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+        eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+        twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90, hundred: 100
+      };
+
+      // 5. Scale Mapping (Matching formatMassiveNumber logic)
+      const scales = {
+        k: 1e3, thousand: 1e3,
+        m: 1e6, million: 1e6,
+        b: 1e9, billion: 1e9,
+        t: 1e12, trillion: 1e12,
+        quadrillion: 1e15, quintillion: 1e18, sextillion: 1e21, septillion: 1e24, octillion: 1e27, nonillion: 1e30, decillion: 1e33
+      };
+
+      // Latin Component mapping for custom "llion" scales (e.g., "Unvigintillion")
+      const pUnits = ["", "un", "duo", "tre", "quattuor", "quin", "sex", "septen", "octo", "novem"];
+      const pTens = ["", "deci", "viginti", "triginta", "quadraginta", "quinquaginta", "sexaginta", "septuaginta", "octoginta", "nonaginta"];
+      const pHundreds = ["", "centi", "ducenti", "trecenti", "quadringenti", "quingenti", "sescenti", "septingenti", "octingenti", "nongenti"];
+
+      // 6. Tokenize and Sum
+      const tokens = str.split(/\s+/);
+      let total = 0;
+      let currentPart = 0;
+
+      for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
+
+        // Check if token is a standard number (like 5.23 or 6e18)
+        let num = parseFloat(token);
+
+        if (wordToNum[token] !== undefined) {
+          let val = wordToNum[token];
+          if (val === 100 && currentPart !== 0) currentPart *= 100;
+          else currentPart += val;
+        }
+        else if (!isNaN(num) && /^[0-9.e+-]+$/.test(token)) {
+          currentPart += num;
+        }
+        else {
+          let multiplier = 0;
+
+          // Check static scales first
+          for (let s in scales) {
+            if (token.startsWith(s)) {
+              multiplier = scales[s];
+              break;
+            }
+          }
+
+          // Check Latin-constructed scales (the custom "llions")
+          if (!multiplier && token.endsWith("llion")) {
+            let prefix = token.replace("llion", "");
+            for (let tier = 11; tier < 1000; tier++) {
+              let u = (tier - 1) % 10;
+              let t = Math.floor((tier - 1) / 10) % 10;
+              let h = Math.floor((tier - 1) / 100) % 10;
+              let constructed = (pUnits[u] + pTens[t] + pHundreds[h]).replace(/en(v|t|d)/, 'em$1').replace(/em(d)/, 'en$1');
+              if (prefix === constructed.toLowerCase()) {
+                multiplier = Math.pow(10, tier * 3);
+                break;
+              }
+            }
+          }
+
+          if (multiplier) {
+            total += (currentPart || 1) * multiplier;
+            currentPart = 0;
+          }
+        }
+      }
+
+      return total + currentPart;
     }
     
     // Procedural Noise Functions
@@ -881,7 +974,11 @@
 
     function buyStock(symbol, amount = null) {
       const stock = [...growthStocks, ...stableStocks, ...cryptoStocks].find(s => s.symbol === symbol);
-      if (amount === null) amount = parseFloat(prompt(`Enter the amount to invest in ${symbol}:`, '100'));
+      if (amount === null) {
+        const raw = prompt(`Enter the amount to invest in ${symbol}:`, '100');
+        if (raw === null) return;
+        amount = parseMassiveNumber(raw);
+      }
 
       if (isNaN(amount) || amount <= 0) {
         alert("Invalid amount!");
@@ -922,7 +1019,11 @@
         return;
       }
 
-      if (amount === null) amount = parseFloat(prompt(`Enter the number of shares to sell (max ${maxShares.toFixed(4)}):`, maxShares.toFixed(4)));
+      if (amount === null) {
+        const raw = prompt(`Enter the number of shares to sell (max ${formatMassiveNumber(maxShares)}):`, maxShares.toFixed(4));
+        if (raw === null) return;
+        amount = parseMassiveNumber(raw);
+      }
 
       if (isNaN(amount) || amount <= 0 || amount > maxShares + 0.0001) {
         alert("Invalid number of shares!");
@@ -1115,7 +1216,7 @@
     });
 
     requestLoanBtn.addEventListener('click', () => {
-      const amount = parseFloat(document.getElementById('loan-amount-input').value);
+      const amount = parseMassiveNumber(document.getElementById('loan-amount-input').value);
       if (isNaN(amount) || amount <= 0) {
         bankMessage.style.color = "#dc3545";
         bankMessage.textContent = "Invalid amount.";
@@ -1300,7 +1401,7 @@
     function playRoulette(betColor) {
       const betInput = document.getElementById('roulette-bet');
       const resultDiv = document.getElementById('roulette-result');
-      const amount = parseFloat(betInput.value);
+      const amount = parseMassiveNumber(betInput.value);
 
       if (isNaN(amount) || amount <= 0) {
         resultDiv.style.color = "#dc3545";
