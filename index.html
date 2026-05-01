@@ -549,8 +549,14 @@
     ];
 
     function formatMassiveNumber(val, decimalPlaces = 2) {
+      if (val < 1000000) {
+        signval = val < 0 ? "-" : "";
+        absval = val < 0 ? -val : val;
+        return sign + val.toLocaleString('en-US')
+      }
+      
       // 1. Setup and handle negative numbers
-      const bigNum = BigInt(val);
+      const bigNum = BigInt(Math.round(val));
       const absNum = bigNum < 0n ? -bigNum : bigNum;
       const sign = bigNum < 0n ? "-" : "";
     
