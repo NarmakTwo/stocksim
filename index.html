@@ -552,7 +552,7 @@
       if (val < 1000000) {
         signval = val < 0 ? "-" : "";
         absval = val < 0 ? -val : val;
-        return sign + val.toLocaleString('en-US')
+        return signval + val.toLocaleString('en-US')
       }
       
       // 1. Setup and handle negative numbers
