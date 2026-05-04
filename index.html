@@ -1074,7 +1074,7 @@
 
       // Net worth = Cash + Stock Value - Debt
       const netWorth = userBalance + totalStockValue - userDebt;
-      document.getElementById('total-balance').textContent = formatMassiveNumber(netWorth)
+      document.getElementById('total-balance').textContent = `${formatMassiveNumber(netWorth)} (${netWorth.toExponential(2)})`
 
       document.getElementById('credit-score').textContent = creditScore;
     }
