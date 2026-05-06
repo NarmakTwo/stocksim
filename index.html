@@ -3,7 +3,7 @@
 
 <head>
   <title>Advanced Stock Market Simulator</title>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
+  <script src="https://unpkg.com/decimal.js@10.6.0/decimal"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Carlito:ital,wght@0,400;0,700;1,400;1,700&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
@@ -490,14 +490,20 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
   <script>
-    let userBalance = 10000;
-    let userDebt = 0;
+    let userBalance = new Decimal(10000);
+    let userDebt = new Decimal(0);
     let creditScore = 750;
     let stocksOwned = {};
     let stockPurchasePrices = {};
     let charts = {};
     let currentTab = 'growth';
     let activeLoan = null;
+
+    Decimal.set({
+      precision: 100,
+      minE: -1000000,
+      maxE: 1000000
+    });
 
     const growthStocks = [
       { symbol: 'AAPL', name: 'Apple Inc.', price: 150.25, volatility: 0.12 },
@@ -716,7 +722,7 @@
       return total + currentPart;
     }*/
     function parseMassiveNumber(string) {
-      return numeral(string).value()
+      return Decimal(string)
     }
 
     // Procedural Noise Functions
@@ -785,8 +791,8 @@
     if (savedState) {
       try {
         loadedState = JSON.parse(savedState);
-        userBalance = loadedState.userBalance !== undefined ? loadedState.userBalance : 10000;
-        userDebt = loadedState.userDebt !== undefined ? loadedState.userDebt : 0;
+        userBalance = new Decimal(loadedState.userBalance !== undefined ? loadedState.userBalance : 10000);
+        userDebt = new Decimal(loadedState.userDebt !== undefined ? loadedState.userDebt : 0);
         creditScore = loadedState.creditScore !== undefined ? loadedState.creditScore : 750;
         if (loadedState.stocksOwned) stocksOwned = loadedState.stocksOwned;
         if (loadedState.stockPurchasePrices) stockPurchasePrices = loadedState.stockPurchasePrices;
@@ -815,8 +821,8 @@
 
     function saveGame() {
       const gameState = {
-        userBalance,
-        userDebt,
+        userBalance: userBalance.toString(),
+        userDebt: userDebt.toString(),
         creditScore,
         stocksOwned,
         stockPurchasePrices,
@@ -969,7 +975,7 @@
       [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(updateStockPrice);
 
       // Add 0.025% interest to user balance
-      userBalance += userBalance * 0.000000025;
+      userBalance = userBalance.plus(userBalance.times(0.000000025));
 
       renderStocks();
       updateUserInfo();
@@ -984,29 +990,31 @@
         amount = parseMassiveNumber(raw);
       }
 
-      if (isNaN(amount) || amount <= 0) {
+      amount = new Decimal(amount);
+
+      if (amount.isNaN() || amount.lte(0)) {
         alert("Invalid amount!");
         return;
       }
 
-      if (amount > userBalance + 0.01) {
+      if (amount.gt(userBalance.plus(0.01))) {
         alert("Insufficient funds!");
         return;
       }
 
-      amount = Math.min(amount, userBalance);
+      amount = Decimal.min(amount, userBalance);
 
-      const sharesBought = amount / stock.price;
-      userBalance -= amount;
-      stocksOwned[symbol] = (stocksOwned[symbol] || 0) + sharesBought;
+      const sharesBought = amount.dividedBy(stock.price);
+      userBalance = userBalance.minus(amount);
+      stocksOwned[symbol] = new Decimal(stocksOwned[symbol] || 0).plus(sharesBought);
 
       if (stockPurchasePrices[symbol] === 0) {
         stockPurchasePrices[symbol] = stock.price;
       } else {
         // Update average purchase price
         const totalShares = stocksOwned[symbol];
-        const totalCost = stockPurchasePrices[symbol] * (totalShares - sharesBought) + amount;
-        stockPurchasePrices[symbol] = totalCost / totalShares;
+        const totalCost = new Decimal(stockPurchasePrices[symbol]).times(totalShares.minus(sharesBought)).plus(amount);
+        stockPurchasePrices[symbol] = totalCost.dividedBy(totalShares).toNumber();
       }
 
       updateUserInfo();
@@ -1016,9 +1024,9 @@
 
     function sellStock(symbol, amount = null) {
       const stock = [...growthStocks, ...stableStocks, ...cryptoStocks].find(s => s.symbol === symbol);
-      const maxShares = stocksOwned[symbol] || 0;
+      const maxShares = new Decimal(stocksOwned[symbol] || 0);
 
-      if (maxShares === 0) {
+      if (maxShares.eq(0)) {
         alert("You don't own any shares!");
         return;
       }
@@ -1029,18 +1037,20 @@
         amount = parseMassiveNumber(raw);
       }
 
-      if (isNaN(amount) || amount <= 0 || amount > maxShares + 0.0001) {
+      amount = new Decimal(amount);
+
+      if (amount.isNaN() || amount.lte(0) || amount.gt(maxShares.plus(0.0001))) {
         alert("Invalid number of shares!");
         return;
       }
 
-      amount = Math.min(amount, maxShares);
+      amount = Decimal.min(amount, maxShares);
 
-      const saleAmount = amount * stock.price;
-      userBalance += saleAmount;
-      stocksOwned[symbol] -= amount;
+      const saleAmount = amount.times(stock.price);
+      userBalance = userBalance.plus(saleAmount);
+      stocksOwned[symbol] = maxShares.minus(amount);
 
-      if (stocksOwned[symbol] < 0.0001) {
+      if (stocksOwned[symbol].lt(0.0001)) {
         stocksOwned[symbol] = 0;
         stockPurchasePrices[symbol] = 0;
       }
@@ -1051,7 +1061,7 @@
     }
 
     function buyMaxStock(symbol) {
-      buyStock(symbol, userBalance);
+      buyStock(symbol, userBalance.toNumber());
     }
 
     function sellMaxStock(symbol) {
@@ -1060,21 +1070,21 @@
     }
 
     function updateUserInfo() {
-      document.getElementById('user-balance').textContent = formatMassiveNumber(userBalance);
-      document.getElementById('user-debt').textContent = formatMassiveNumber(userDebt);
+      document.getElementById('user-balance').textContent = formatMassiveNumber(userBalance.toNumber());
+      document.getElementById('user-debt').textContent = formatMassiveNumber(userDebt.toNumber());
 
       // Calculate total value of stock portfolio
-      let totalStockValue = 0;
+      let totalStockValue = new Decimal(0);
       const allStocks = [...growthStocks, ...stableStocks, ...cryptoStocks];
 
       allStocks.forEach(stock => {
-        const shares = stocksOwned[stock.symbol] || 0;
-        totalStockValue += shares * stock.price;
+        const shares = new Decimal(stocksOwned[stock.symbol] || 0);
+        totalStockValue = totalStockValue.plus(shares.times(stock.price));
       });
 
       // Net worth = Cash + Stock Value - Debt
-      const netWorth = userBalance + totalStockValue - userDebt;
-      document.getElementById('total-balance').textContent = `${formatMassiveNumber(netWorth)} (${netWorth.toExponential(2)})`
+      const netWorth = userBalance.plus(totalStockValue).minus(userDebt);
+      document.getElementById('total-balance').textContent = `${formatMassiveNumber(netWorth.toNumber())} (${netWorth.toExponential(2)})`
 
       document.getElementById('credit-score').textContent = creditScore;
     }
@@ -1189,8 +1199,8 @@
         localStorage.removeItem('stocksim_game_save');
 
         // Reset to initial values
-        userBalance = 10000;
-        userDebt = 0;
+        userBalance = new Decimal(10000);
+        userDebt = new Decimal(0);
         creditScore = 750;
         activeLoan = null;
 
@@ -1220,39 +1230,39 @@
     });
 
     requestLoanBtn.addEventListener('click', () => {
-      const amount = parseMassiveNumber(document.getElementById('loan-amount-input').value);
-      if (isNaN(amount) || amount <= 0) {
+      const amount = new Decimal(parseMassiveNumber(document.getElementById('loan-amount-input').value));
+      if (amount.isNaN() || amount.lte(0)) {
         bankMessage.style.color = "#dc3545";
         bankMessage.textContent = "Invalid amount.";
         return;
       }
 
-      if (activeLoan || userDebt > 0) {
+      if (activeLoan || userDebt.gt(0)) {
         bankMessage.style.color = "#dc3545";
         bankMessage.textContent = "You already have active debt!";
         return;
       }
 
       const maxLoan = Math.max(0, Math.floor(creditScore * (10000 / 750) / 100) * 100);
-      if (amount > maxLoan) {
+      if (amount.gt(maxLoan)) {
         bankMessage.style.color = "#dc3545";
         bankMessage.textContent = `Denied. Max loan is $${maxLoan}.`;
         return;
       }
 
-      const interest = amount * 0.025; // 2.5% interest
-      const totalOwed = amount + interest;
+      const interest = amount.times(0.025); // 2.5% interest
+      const totalOwed = amount.plus(interest);
 
-      userBalance += amount;
-      userDebt += totalOwed;
+      userBalance = userBalance.plus(amount);
+      userDebt = userDebt.plus(totalOwed);
 
       // Dynamic loan duration based on loan amount and credit score
       // A $10,000 loan with a 750 credit score gives exactly 180 seconds (3 minutes)
-      const timeToPay = Math.floor(60 + (amount / 10000) * 60 + (creditScore / 750) * 60);
+      const timeToPay = Math.floor(60 + (amount.toNumber() / 10000) * 60 + (creditScore / 750) * 60);
 
       activeLoan = {
-        amount: totalOwed,
-        originalAmount: totalOwed,
+        amount: totalOwed.toString(),
+        originalAmount: totalOwed.toString(),
         dueDate: Date.now() + timeToPay * 1000,
         lastPenaltyTime: Date.now()
       };
@@ -1266,8 +1276,8 @@
     });
 
     payDebtBtn.addEventListener('click', () => {
-      if (userBalance >= userDebt && userDebt > 0) {
-        userBalance -= userDebt;
+      if (userBalance.gte(userDebt) && userDebt.gt(0)) {
+        userBalance = userBalance.minus(userDebt);
 
         if (activeLoan) {
           const now = Date.now();
@@ -1277,7 +1287,7 @@
           }
         }
 
-        userDebt = 0;
+        userDebt = new Decimal(0);
         activeLoan = null;
         updateUserInfo();
         saveGame();
@@ -1305,22 +1315,23 @@
         // Auto-sell and resolve if 60 seconds late
         if (now - activeLoan.dueDate > 60 * 1000) {
           [...growthStocks, ...stableStocks, ...cryptoStocks].forEach(stock => {
-            if (stocksOwned[stock.symbol] > 0) {
-              userBalance += stocksOwned[stock.symbol] * stock.price;
+            const shares = new Decimal(stocksOwned[stock.symbol] || 0);
+            if (shares.gt(0)) {
+              userBalance = userBalance.plus(shares.times(stock.price));
               stocksOwned[stock.symbol] = 0;
               stockPurchasePrices[stock.symbol] = 0;
             }
           });
 
-          if (userBalance >= userDebt) {
-            userBalance -= userDebt;
-            userDebt = 0;
+          if (userBalance.gte(userDebt)) {
+            userBalance = userBalance.minus(userDebt);
+            userDebt = new Decimal(0);
             activeLoan = null;
             creditScore = 300;
             alert("The bank auto-sold your stocks to pay your debt. Your credit score has plummeted!");
           } else {
-            userBalance = 10;
-            userDebt = 0;
+            userBalance = new Decimal(10);
+            userDebt = new Decimal(0);
             activeLoan = null;
             creditScore = 300;
             alert("You defaulted on your loan! The bank auto-sold your stocks and seized your assets, leaving you with $10.");
@@ -1337,8 +1348,9 @@
         // Apply late penalty every second
         if (now - activeLoan.lastPenaltyTime >= 1000) {
           // Terrible late fees: 1% of original debt per second
-          userDebt += activeLoan.originalAmount * 0.01;
-          activeLoan.amount = userDebt;
+          const originalDebt = new Decimal(activeLoan.originalAmount);
+          userDebt = userDebt.plus(originalDebt.times(0.01));
+          activeLoan.amount = userDebt.toString();
 
           // Decrease credit score
           creditScore -= 2;
@@ -1354,7 +1366,7 @@
 
       const debtAmountDisplay = document.getElementById('debt-amount-display');
       debtAmountDisplay.textContent = userDebt.toFixed(2);
-      if (userDebt > userBalance) {
+      if (userDebt.gt(userBalance)) {
         debtAmountDisplay.style.color = "#dc3545";
       } else {
         debtAmountDisplay.style.color = "inherit";
@@ -1405,22 +1417,22 @@
     function playRoulette(betColor) {
       const betInput = document.getElementById('roulette-bet');
       const resultDiv = document.getElementById('roulette-result');
-      const amount = parseMassiveNumber(betInput.value);
+      const amount = new Decimal(parseMassiveNumber(betInput.value));
 
-      if (isNaN(amount) || amount <= 0) {
+      if (amount.isNaN() || amount.lte(0)) {
         resultDiv.style.color = "#dc3545";
         resultDiv.textContent = "Please enter a valid bet amount.";
         return;
       }
 
-      if (amount > userBalance) {
+      if (amount.gt(userBalance)) {
         resultDiv.style.color = "#dc3545";
         resultDiv.textContent = "Insufficient funds!";
         return;
       }
 
       // Deduct bet amount
-      userBalance -= amount;
+      userBalance = userBalance.minus(amount);
 
       const roll = Math.floor(Math.random() * 37);
       let outcomeColor = '';
@@ -1450,10 +1462,10 @@
       btns.forEach(b => b.disabled = true);
 
       setTimeout(() => {
-        let winnings = 0;
+        let winnings = new Decimal(0);
         if (betColor === outcomeColor) {
-          winnings = (betColor === 'green') ? amount * 1000 : amount * 2;
-          userBalance += winnings;
+          winnings = (betColor === 'green') ? amount.times(1000) : amount.times(2);
+          userBalance = userBalance.plus(winnings);
           resultDiv.style.color = "#28a745";
           resultDiv.textContent = `Landed on ${outcomeColor.toUpperCase()} (Roll: ${roll})! You won $${winnings.toFixed(2)}!`;
         } else {
