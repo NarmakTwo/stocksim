@@ -556,76 +556,116 @@
     ];
 
     function formatMassiveNumber(val, decimalPlaces = 2) {
-      if (val < 1000000) {
-        signval = val < 0 ? "-" : "";
-        absval = val < 0 ? -val : val;
-        return signval + val.toLocaleString('en-US')
+      const maxDecimals = Math.min(2, Math.max(0, decimalPlaces));
+    
+      // 1. Convert input safely
+      const str = typeof val === 'string' ? val.trim() : String(val);
+      const sign = str.startsWith('-') ? '-' : '';
+      const cleanStr = str.replace(/^[-+]/, '');
+    
+      // 2. Handle Numbers Under 1 Million (including small decimals and fractions)
+      const numVal = Number(cleanStr);
+      if (!Number.isNaN(numVal) && numVal < 1_000_000) {
+        if (maxDecimals === 0) {
+          return (sign ? '-' : '') + Math.round(numVal).toLocaleString('en-US');
+        }
+    
+        const factor = 10 ** maxDecimals;
+        const rounded = Math.round(numVal * factor) / factor;
+    
+        // Format with commas and cap decimals strictly
+        return (sign ? '-' : '') + rounded.toLocaleString('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: maxDecimals,
+        });
       }
-
-      // 1. Setup and handle negative numbers
-      const bigNum = BigInt(Math.round(val));
-      const absNum = bigNum < 0n ? -bigNum : bigNum;
-      const sign = bigNum < 0n ? "-" : "";
-
-      // 2. Numbers under 1 Million: Just return with commas
-      if (absNum < 1000000n) {
-        return sign + absNum.toLocaleString('en-US');
+    
+      // 3. Handle Large Numbers (1 Million+)
+      // Parse whole part into BigInt (handles string, number, or exponential notation)
+      let absNum;
+      try {
+        const wholePartStr = cleanStr.split('.')[0];
+        absNum = BigInt(wholePartStr);
+      } catch {
+        const [mantissa, exponent] = cleanStr.toLowerCase().split('e');
+        if (exponent) {
+          const exp = parseInt(exponent, 10);
+          const [intPart, decPart = ''] = mantissa.split('.');
+          if (exp >= decPart.length) {
+            absNum = BigInt(intPart + decPart + '0'.repeat(exp - decPart.length));
+          } else {
+            absNum = BigInt(intPart + decPart.slice(0, exp));
+          }
+        } else {
+          absNum = 0n;
+        }
       }
-
-      // 3. Determine the Tier (n). Every +1 is a factor of 1,000.
-      // n=1 (Million), n=2 (Billion), n=3 (Trillion), etc.
-      const tier = Math.floor((absNum.toString().length - 1) / 3);
-
-      // 4. Generate the Unit Name (Latin Prefix Logic)
-      let unitName = "";
-      if (tier === 1) unitName = "M";
-      else if (tier === 2) unitName = "B";
-      else if (tier === 3) unitName = "T";
+    
+      // 4. Determine Tier: each tier increases by 1,000
+      const numDigits = absNum.toString().length;
+      const tier = Math.floor((numDigits - 1) / 3);
+    
+      // 5. Generate Unit Name
+      let unitName = '';
+      if (tier === 1) unitName = 'M';
+      else if (tier === 2) unitName = 'B';
+      else if (tier === 3) unitName = 'T';
       else {
-        const units = ["", "un", "duo", "tre", "quattuor", "quin", "sex", "septen", "octo", "novem"];
-        const tens = ["", "deci", "viginti", "triginta", "quadraginta", "quinquaginta", "sexaginta", "septuaginta", "octoginta", "nonaginta"];
-        const hundreds = ["", "centi", "ducenti", "trecenti", "quadringenti", "quingenti", "sescenti", "septingenti", "octingenti", "nongenti"];
-
-        const i = tier - 1;
-        const u = i % 10;
-        const t = Math.floor(i / 10) % 10;
-        const h = Math.floor(i / 100) % 10;
-
-        // Special case for the "Quadrillion" through "Nonillion" range
-        const simpleNames = { 4: "Quadrillion", 5: "Quintillion", 6: "Sextillion", 7: "Septillion", 8: "Octillion", 9: "Nonillion", 10: "Decillion" };
-
+        const units = ['', 'un', 'duo', 'tre', 'quattuor', 'quin', 'sex', 'septen', 'octo', 'novem'];
+        const tens = ['', 'deci', 'viginti', 'triginta', 'quadraginta', 'quinquaginta', 'sexaginta', 'septuaginta', 'octoginta', 'nonaginta'];
+        const hundreds = ['', 'centi', 'ducenti', 'trecenti', 'quadringenti', 'quingenti', 'sescenti', 'septingenti', 'octingenti', 'nongenti'];
+    
+        const simpleNames = {
+          4: 'Quadrillion', 5: 'Quintillion', 6: 'Sextillion',
+          7: 'Septillion', 8: 'Octillion', 9: 'Nonillion', 10: 'Decillion',
+        };
+    
         if (simpleNames[tier]) {
           unitName = simpleNames[tier];
         } else {
-          // Construct name: [Unit][Ten][Hundred] + "llion"
+          const i = tier - 1;
+          const u = i % 10;
+          const t = Math.floor(i / 10) % 10;
+          const h = Math.floor(i / 100) % 10;
+    
           let constructed = units[u] + tens[t] + hundreds[h];
-          // Phonetic fix: septen -> septem, novem -> novem before certain letters
           constructed = constructed.replace(/en(v|t|d)/, 'em$1').replace(/em(d)/, 'en$1');
-          unitName = constructed.charAt(0).toUpperCase() + constructed.slice(1) + "llion";
+          unitName = constructed.charAt(0).toUpperCase() + constructed.slice(1) + 'llion';
         }
       }
-
-      // 5. Calculate the Coefficient (the number before the word)
+    
+      // 6. Split Coefficient and Decimals
       const divisor = 10n ** BigInt(tier * 3);
-      const wholePart = absNum / divisor;
+      let wholePart = absNum / divisor;
       const remainder = absNum % divisor;
-
-      // Format whole part with commas (e.g., "2,360,718")
-      let output = sign + wholePart.toLocaleString('en-US');
-
-      // 6. Handle Decimals manually (BigInt doesn't do floats)
-      if (decimalPlaces > 0) {
-        const precision = 10n ** BigInt(decimalPlaces);
-        const fractionalPart = (remainder * precision) / divisor;
-        if (fractionalPart > 0n) {
-          // Pad and trim trailing zeros for a clean look (e.g., .5 instead of .50)
-          const formattedDec = fractionalPart.toString().padStart(decimalPlaces, '0').replace(/0+$/, '');
-          output += "." + formattedDec;
+    
+      let formattedDec = '';
+      if (maxDecimals > 0) {
+        const precision = 10n ** BigInt(maxDecimals);
+        // Round to nearest: (remainder * precision + divisor / 2) / divisor
+        let fraction = (remainder * precision + divisor / 2n) / divisor;
+    
+        // Rollover check (e.g. 1.996 -> 2.00)
+        if (fraction >= precision) {
+          wholePart += 1n;
+          fraction -= precision;
+        }
+    
+        if (fraction > 0n) {
+          formattedDec = fraction
+            .toString()
+            .padStart(maxDecimals, '0')
+            .replace(/0+$/, ''); // Strip unnecessary trailing zeroes
         }
       }
-
-      // 7. Final assembly
-      const space = unitName.length > 1 ? " " : "";
+    
+      // 7. Final Assembly
+      let output = sign + wholePart.toLocaleString('en-US');
+      if (formattedDec.length > 0) {
+        output += '.' + formattedDec;
+      }
+    
+      const space = unitName.length > 1 ? ' ' : '';
       return output + space + unitName;
     }
 
@@ -893,7 +933,7 @@
             ${stock.change >= 0 ? '▲' : '▼'} $${Math.abs(stock.change).toFixed(2)}
           </div>
           <div class="stock-owned">
-            Owned: ${formatMassiveNumber(owned)}
+            Owned: ${formatMassiveNumber(owned).toFixed(2)}
             ${owned > 0 ? ` (${profitLoss >= 0 ? '+' : ''}${profitLoss.toFixed(2)}%)` : ''}
           </div>
           <div class="chart-container">
